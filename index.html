@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dictée</title>
+<style>
+:root{--base:#faf4ed;--surface:#fffaf3;--text:#575279;--muted:#9893a5;--accent:#286983;--err:#b4637a}
+@media(prefers-color-scheme:dark){:root{--base:#191724;--surface:#1f1d2e;--text:#e0def4;--muted:#6e6a86;--accent:#31748f;--err:#eb6f92}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;gap:16px;padding:16px;max-width:760px;margin-inline:auto;background:var(--base);color:var(--text);font:16px/1.5 system-ui,sans-serif}
+#drop{border:2px dashed var(--muted);border-radius:8px;padding:40px 16px;text-align:center;color:var(--muted);cursor:pointer}
+#drop.over{border-color:var(--accent);color:var(--accent)}
+#drop.err{border-color:var(--err);color:var(--err)}
+textarea{flex:1;min-height:50vh;resize:vertical;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:inherit;font:inherit}
+button{align-self:flex-end;padding:8px 20px;border:0;border-radius:8px;background:var(--accent);color:var(--base);font:inherit;cursor:pointer}
+</style>
+<div id="drop" tabindex="0">Glissez un fichier mp3 ici</div>
+<input id="file" type="file" accept="audio/*" hidden>
+<textarea id="out" spellcheck="false"></textarea>
+<button id="copy">Copier</button>
+<script>
+const $ = id => document.getElementById(id), drop = $("drop"), idle = drop.textContent;
+const say = (t, cls = "") => { drop.textContent = t; drop.className = cls };
+async function send(file) {
+  say("Transcription de « " + file.name + " »…");
+  const body = new FormData(); body.append("file", file);
+  try {
+    const r = await fetch("/", { method: "POST", body });
+    const t = await r.text();
+    if (!r.ok) throw new Error(t);
+    $("out").value = t; say(idle);
+  } catch (e) { say(e.message, "err"); }
+}
+drop.onclick = () => $("file").click();
+drop.onkeydown = e => e.key === "Enter" && $("file").click();
+$("file").onchange = e => e.target.files[0] && send(e.target.files[0]);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over") };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && send(e.dataTransfer.files[0]) };
+$("copy").onclick = () => navigator.clipboard.writeText($("out").value);
+</script>
