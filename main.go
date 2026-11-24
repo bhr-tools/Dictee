@@ -20,6 +20,9 @@ import (
 //go:embed index.html
 var page []byte
 
+//go:embed icon.svg
+var icon []byte
+
 const maxUpload = 200 << 20
 
 var errBadInput = errors.New("bad input")
@@ -34,6 +37,12 @@ func main() {
 
 	busy := make(chan struct{}, 1) // one transcription at a time: whisper saturates the CPU
 	client := &http.Client{Timeout: 20 * time.Minute}
+
+	// Served without a password (Caddy exempts /icons/), for home screens and dashboards.
+	http.HandleFunc("GET /icons/icon.svg", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Write(icon)
+	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch {
